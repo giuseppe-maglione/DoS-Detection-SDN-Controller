@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Policy di Rete</title>
+    <!-- Load Tailwind CSS for a modern and responsive style -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Add a clean font for better readability */
+        body {
+            font-family: 'Inter', sans-serif;
+            @apply text-white; /* Main text in white */
+            background-image: url('./unina-bg.jpg'); /* Load image from local folder */
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-color: #f3f4f6;
+            /* Center the app vertically and horizontally */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Basic style for the main container */
+        .container {
+            @apply max-w-4xl mx-auto p-4 md:p-8;
+        }
+
+        /* Style for content boxes with higher opacity for readability */
+        .content-box {
+            @apply bg-white bg-opacity-90 p-6 rounded-3xl shadow-2xl mb-6;
+        }
+        
+        /* Utility class to visually hide labels for accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container relative">
+        <!-- University logo at the top left -->
+        <div class="absolute top-4 left-4">
+            <img src="./unina-logo.png" alt="Logo UNINA" class="h-12 opacity-80" />
+        </div>
+
+        <h1 class="text-4xl font-extrabold text-center mb-10 text-white drop-shadow-lg">
+            Gestione Policy di Rete
+        </h1>
+
+        <!-- Login Section -->
+        <div id="login-container" class="content-box">
+            <h2 class="text-2xl font-semibold text-center mb-4 text-white">Accedi al pannello</h2>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="username" class="sr-only">Username</label>
+                    <input type="text" id="username" name="username" required placeholder="Username"
+                           class="mt-1 block w-full rounded-full border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3">
+                </div>
+                <div>
+                    <label for="password" class="sr-only">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Password"
+                           class="mt-1 block w-full rounded-full border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105">
+                    Accedi
+                </button>
+                <p id="login-message" class="text-center text-red-500"></p>
+            </form>
+        </div>
+
+        <!-- Main App Section (visible after login) -->
+        <div id="app-container" class="hidden">
+            <!-- Dashboard Title and Logout Button -->
+            <div class="content-box flex justify-between items-center mb-4">
+                <h2 class="text-3xl font-semibold text-white">Dashboard Policy</h2>
+                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full transition-all duration-300">
+                    Logout
+                </button>
+            </div>
+
+            <!-- Message area -->
+            <div id="app-message-box" class="hidden p-3 rounded-xl mb-4 text-center font-medium" role="alert"></div>
+
+            <!-- Navigation buttons container -->
+            <div id="main-menu" class="content-box flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4 mb-6">
+                <button id="add-policy-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 flex-1">
+                    Aggiungi nuova Policy
+                </button>
+                <button id="show-policies-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 flex-1">
+                    Mostra Policy esistenti
+                </button>
+            </div>
+
+            <!-- Add Policy Section (initially hidden) -->
+            <div id="add-policy-section" class="content-box hidden">
+                <h3 class="text-xl font-semibold mb-4 text-white">Aggiungi nuova Policy</h3>
+                <form id="add-policy-form" class="space-y-4">
+                    <div>
+                        <label for="add-switch" class="sr-only">ID Switch (DPID)</label>
+                        <input type="number" id="add-switch" name="switch" required placeholder="ID Switch (DPID)"
+                               class="mt-1 block w-full rounded-full border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3">
+                    </div>
+                    <div>
+                        <label for="add-port" class="sr-only">Porta</label>
+                        <input type="number" id="add-port" name="port" required placeholder="Porta"
+                               class="mt-1 block w-full rounded-full border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3">
+                    </div>
+                    <div>
+                        <label for="add-reason" class="sr-only">Motivazione (opzionale)</label>
+                        <input type="text" id="add-reason" name="reason" placeholder="Motivazione (opzionale)"
+                               class="mt-1 block w-full rounded-full border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3">
+                    </div>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold w-full py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105">
+                        Aggiungi Policy
+                    </button>
+                </form>
+            </div>
+
+            <!-- Existing Policies Section (initially hidden) -->
+            <div id="policies-list-section" class="content-box hidden">
+                <h3 class="text-xl font-semibold mb-4 text-white">Policy Esistenti</h3>
+                <div id="policies-list" class="space-y-4">
+                    <!-- Policies will be inserted here by JavaScript -->
+                    <p class="text-center text-gray-500">Nessuna policy trovata. Clicca su "Mostra Policy esistenti" per caricare.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration - IMPORTANT: Change this URL to your actual API endpoint
+        const API_BASE_URL = 'http://localhost:8080'; // Sostituisci con l'URL del tuo server
+
+        // UI elements
+        const loginContainer = document.getElementById('login-container');
+        const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+        const appMessageBox = document.getElementById('app-message-box');
+        const addPolicySection = document.getElementById('add-policy-section');
+        const addPolicyForm = document.getElementById('add-policy-form');
+        const policiesListSection = document.getElementById('policies-list-section');
+        const policiesList = document.getElementById('policies-list');
+        const addPolicyBtn = document.getElementById('add-policy-btn');
+        const showPoliciesBtn = document.getElementById('show-policies-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+
+        // Simple client-side "authentication" for demonstration purposes
+        // In a real application, you would use a proper backend authentication system
+        function handleLogin(event) {
+            event.preventDefault();
+            const username = loginForm.username.value;
+            const password = loginForm.password.value;
+
+            if (username === 'admin' && password === 'password') {
+                showApp();
+            } else {
+                showMessage(document.getElementById('login-message'), 'Credenziali non valide', 'error');
+            }
+        }
+
+        // Show the main application dashboard and hide the login form
+        function showApp() {
+            loginContainer.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+            // Initially, hide any section
+            hideSections();
+            hideMessage(appMessageBox);
+        }
+
+        // Show the login form and hide the application dashboard
+        function showLogin() {
+            loginContainer.classList.remove('hidden');
+            appContainer.classList.add('hidden');
+            loginForm.reset();
+            hideMessage(document.getElementById('login-message'));
+            showMessage(appMessageBox, 'Disconnesso con successo', 'success');
+        }
+        
+        // Hide all policy-related sections
+        function hideSections() {
+            addPolicySection.classList.add('hidden');
+            policiesListSection.classList.add('hidden');
+        }
+
+        // Display a message in the specified element
+        function showMessage(element, message, type) {
+            element.textContent = message;
+            element.classList.remove('hidden');
+            if (type === 'success') {
+                element.classList.add('bg-green-100', 'text-green-800');
+                element.classList.remove('bg-red-100', 'text-red-800');
+            } else if (type === 'error') {
+                element.classList.add('bg-red-100', 'text-red-800');
+                element.classList.remove('bg-green-100', 'text-green-800');
+            }
+        }
+
+        // Hide a message
+        function hideMessage(element) {
+            element.classList.add('hidden');
+        }
+
+        // Function to fetch and display the list of policies
+        async function listPolicies() {
+            hideSections();
+            policiesListSection.classList.remove('hidden');
+            policiesList.innerHTML = '<p class="text-center text-gray-500">Caricamento policy...</p>';
+            try {
+                const response = await fetch(`${API_BASE_URL}/policy`, {
+                    method: 'GET'
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    renderPolicies(data);
+                    showMessage(appMessageBox, 'Elenco policy aggiornato!', 'success');
+                } else {
+                    throw new Error(data || 'Errore nel caricamento delle policy');
+                }
+            } catch (error) {
+                console.error('Errore nel recupero delle policy:', error);
+                policiesList.innerHTML = `<p class="text-center text-red-500">Errore: Impossibile caricare le policy. ${error.message}</p>`;
+                showMessage(appMessageBox, `Errore nel caricamento delle policy: ${error.message}`, 'error');
+            }
+        }
+
+        // Function to render the policies in the UI
+        function renderPolicies(policies) {
+            policiesList.innerHTML = '';
+            const allPolicies = Object.entries(policies);
+
+            if (allPolicies.length === 0) {
+                policiesList.innerHTML = '<p class="text-center text-gray-500">Nessuna policy configurata.</p>';
+                return;
+            }
+
+            allPolicies.forEach(([dpid, ports]) => {
+                Object.entries(ports).forEach(([port, policy]) => {
+                    const policyCard = document.createElement('div');
+                    policyCard.className = 'bg-gray-50 p-4 rounded-lg flex justify-between items-center shadow-sm';
+                    
+                    const reasonText = policy.reason ? `(Motivazione: ${policy.reason})` : '';
+                    policyCard.innerHTML = `
+                        <div>
+                            <p class="font-semibold text-lg text-gray-800">Switch DPID: <span class="text-blue-600">${dpid}</span></p>
+                            <p class="text-md text-gray-800">Porta: <span class="text-blue-600">${port}</span></p>
+                            <p class="text-sm text-gray-500">Stato: ${policy.blocked ? 'Bloccata' : 'Sbloccata'} ${reasonText}</p>
+                        </div>
+                        <button class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 delete-btn" data-dpid="${dpid}" data-port="${port}">
+                            Rimuovi
+                        </button>
+                    `;
+                    policiesList.appendChild(policyCard);
+                });
+            });
+
+            // Add event listeners to the new delete buttons
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', handleDeletePolicy);
+            });
+        }
+
+        // Function to handle the add policy form submission
+        async function handleAddPolicy(event) {
+            event.preventDefault();
+            hideMessage(appMessageBox);
+
+            const form = event.target;
+            const policyData = {
+                switch: parseInt(form.switch.value),
+                port: parseInt(form.port.value),
+                reason: form.reason.value || 'manual'
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/policy`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(policyData)
+                });
+                
+                const responseText = await response.text();
+
+                if (response.ok) {
+                    showMessage(appMessageBox, `Policy aggiunta con successo! ${responseText}`, 'success');
+                    form.reset();
+                    listPolicies(); // Refresh the list
+                } else {
+                    throw new Error(responseText || 'Errore nella richiesta');
+                }
+            } catch (error) {
+                console.error('Errore nell\'aggiunta della policy:', error);
+                showMessage(appMessageBox, `Errore nell'aggiunta della policy: ${error.message}`, 'error');
+            }
+        }
+
+        // Function to handle the delete policy button click
+        async function handleDeletePolicy(event) {
+            hideMessage(appMessageBox);
+
+            const dpid = event.target.getAttribute('data-dpid');
+            const port = event.target.getAttribute('data-port');
+
+            const policyData = {
+                switch: parseInt(dpid),
+                port: parseInt(port)
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/policy`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(policyData)
+                });
+
+                const responseText = await response.text();
+                
+                if (response.ok) {
+                    showMessage(appMessageBox, `Policy rimossa con successo! ${responseText}`, 'success');
+                    listPolicies(); // Refresh the list
+                } else {
+                    throw new Error(responseText || 'Errore nella richiesta');
+                }
+            } catch (error) {
+                console.error('Errore nella rimozione della policy:', error);
+                showMessage(appMessageBox, `Errore nella rimozione della policy: ${error.message}`, 'error');
+            }
+        }
+        
+        // Add event listeners
+        loginForm.addEventListener('submit', handleLogin);
+        addPolicyBtn.addEventListener('click', () => {
+            hideSections();
+            addPolicySection.classList.remove('hidden');
+        });
+        showPoliciesBtn.addEventListener('click', listPolicies);
+        addPolicyForm.addEventListener('submit', handleAddPolicy);
+        logoutBtn.addEventListener('click', showLogin);
+        
+    </script>
+</body>
+</html>
+
