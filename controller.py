@@ -41,6 +41,7 @@ BAN_RATIO = 10              # fattore di ban-time
 
 # MAC noti degli host
 HOST_MACS = {"00:00:00:00:00:01", "00:00:00:00:00:02", "00:00:00:00:00:03"}
+FEATURE_CLASS = "normale"
 
 # colori per output console
 RED = "\033[91m"
@@ -110,7 +111,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         self.monitor_thread = hub.spawn(self._monitor_loop)
         self.detect_thread = hub.spawn(self._detect_loop)
         self.enforce_thread = hub.spawn(self._enforce_loop)
-        # self.feature_thread = hub.spawn(self._feature_loop)   # thread di raccolta dati per addestrare il modello
+        self.feature_thread = hub.spawn(self._feature_loop)   # thread di raccolta dati per addestrare il modello
 
     # === MONITORING ===
     @set_ev_cls(ofp_event.EventOFPStateChange, [MAIN_DISPATCHER, DEAD_DISPATCHER])
@@ -226,7 +227,6 @@ class SimpleSwitch13(app_manager.RyuApp):
                     state["counter"] = max(0, state["counter"] - 1)     # decrementa contatore
                 # --- detection machine learning ---
                 ml_detect = False
-                '''
                 if mac in HOST_MACS:    # evita predizioni su dati degli switch (solo host → host)
                     features = self.extract_features(dpid, mac)
                     if features:
@@ -241,7 +241,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                                     ml_detect = True
                             except Exception as e:
                                 hub.sleep(1)   
-                '''
+                                
                 if classical_detect:
                     state["counter"] = min(X, state["counter"] + 1)
                     self.logger.info(YELLOW + f"\t[DETECTION] Warning: A possible DoS attack has been detected. Info:" + RESET)
@@ -321,7 +321,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         rates = self.rate_history.get(dpid, {}).get(mac, [])
         times = self.mac_timestamps.get(dpid, {}).get(mac, [])
 
-        if len(rates) < 2 or len(times) < 2:
+        if len(rates) < 1 or len(times) < 1:
             return None  # non abbastanza dati
 
         mean_rate = np.mean(rates)
@@ -364,7 +364,7 @@ class SimpleSwitch13(app_manager.RyuApp):
             "burst_count": burst_count,
             "src_diversity": src_diversity,
             "small_pkt_ratio": small_pkt_ratio,
-            "class": "attacco"  
+            "class": str(FEATURE_CLASS)
         }
         return features
     
@@ -377,7 +377,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                         continue
                     features = self.extract_features(dpid, mac)
                     if features:
-                        features["class"] = "attacco"  # aggiungi colonna classe
+                        features["class"] = str(FEATURE_CLASS)  # aggiungi colonna classe
                         with open(self.csv_file, "a", newline="") as f:
                             writer = csv.DictWriter(
                                 f,
