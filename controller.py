@@ -36,7 +36,7 @@ STATIC_THRESHOLD = 7e5      # soglia statica, circa 80% della capacità critica 
 K = 1                       # fattore di deviazione standard per la soglia dinamica 
 MEAN_RATIO = 1              # fattore di gestione media mobile
 N_HISTORY = 20              # numero di campioni per valutare soglia dinamica e raccolta dati
-ALPHA = 0.85                # decremento contatore se rate < 85% della soglia attuale
+ALPHA = 0.8                 # decremento contatore se rate < 80% della soglia attuale
 BAN_RATIO = 10              # fattore di ban-time
 
 # MAC noti degli host
@@ -63,9 +63,9 @@ class SimpleSwitch13(app_manager.RyuApp):
         self.datapaths = {}
         self.mac_to_port = {}
 
-        # stats correnti per porta e MAC
+        # strutture dati per statistiche
         self.port_stats = {}          # {dpid: {port: {"rx_bytes": ..., "rx_packets": ...}}}
-        self.prev_port_stats = {}     # per le statistiche precedenti
+        self.prev_port_stats = {}     # stats al ciclo precedente
 
         self.detection_state = {}     # {dpid: {mac: {"blocked": False, "counter": 0}}}
         self.rate_history = {}        # {dpid: {mac: [rate1, rate2,...]}}
@@ -102,9 +102,9 @@ class SimpleSwitch13(app_manager.RyuApp):
         wsgi = kwargs['wsgi']
         wsgi.register(PolicyAPI, {'controller': self})
 
-        # code thread-safe
-        self.stats_queue = queue.Queue()     # coda monitoring → detection
-        self.policy_queue = queue.Queue()    # coda detection → enforcement
+        # code thread-safe per comunicazione tra thread
+        self.stats_queue = queue.Queue()     # monitoring → detection
+        self.policy_queue = queue.Queue()    # detection → enforcement
         
         # spawn dei thread
         self.monitor_thread = hub.spawn(self._monitor_loop)
@@ -181,7 +181,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                     else:
                         dynamic_threshold = STATIC_THRESHOLD
 
-                    # invia il rate alla coda di detection
+                    # push delle stats in coda detection 
                     self.stats_queue.put((dpid, mac_to_check, rate, dynamic_threshold))
         
         # aggiorna le statistiche precedenti con le statistiche correnti per il prossimo ciclo
@@ -230,7 +230,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                 if mac in HOST_MACS:    # evita predizioni su dati degli switch (solo host → host)
                     features = self.extract_features(dpid, mac)
                     if features:
-                        # evita predizione se tutte le feature sono 0 o quasi
+                        # evita predizione su dati incompleti
                         if any(features[f] > 0 for f in self.ml_features):
                             X_input = pd.DataFrame([[features[f] for f in self.ml_features]],
                                                    columns=self.ml_features)
@@ -245,11 +245,11 @@ class SimpleSwitch13(app_manager.RyuApp):
                 if classical_detect:
                     state["counter"] = min(X, state["counter"] + 1)
                     self.logger.info(YELLOW + f"\t[DETECTION] Warning: A possible DoS attack has been detected. Info:" + RESET)
-                    self.logger.info(YELLOW + f"Mac: {mac}, Switch: {dpid}, Exceeded threshold: {threshold:.1f}, Current rate: {rate:.1f}, Counter: {statre['counter']}/{X}" + RESET)
+                    self.logger.info(YELLOW + f"\tMac: {mac}, Switch: {dpid}, Exceeded threshold: {threshold:.1f}, Current rate: {rate:.1f}, Counter: {state['counter']}/{X}" + RESET)
                 if ml_detect:
                     state["counter"] = min(X, state["counter"] + 1)
                     self.logger.info(PURPLE + f"\t[STEALTH/DDOS DETECTION] Warning: A possible Stealth/DDoS attack has been detected by ML model. Info:" + RESET)
-                    self.logger.info(PURPLE + f"Mac: {mac}, Switch: {dpid}, Exceeded threshold: {threshold:.1f}, Current rate: {rate:.1f}, Counter: {statre['counter']}/{X}" + RESET)
+                    self.logger.info(PURPLE + f"\tMac: {mac}, Switch: {dpid}, Exceeded threshold: {threshold:.1f}, Current rate: {rate:.1f}, Counter: {state['counter']}/{X}" + RESET)
                     
                 # blocco se il contatore raggiunge X
                 if state["counter"] >= X:
@@ -278,6 +278,7 @@ class SimpleSwitch13(app_manager.RyuApp):
 
             dpid = str(policy.get("switch"))
             mac = policy.get("mac")
+            reason = str(policy.get("reason", "manual"))
 
             if policy.get("action") == "remove":
                 if dpid in self.policies and mac in self.policies[dpid]:
@@ -289,7 +290,7 @@ class SimpleSwitch13(app_manager.RyuApp):
 
             if "blocked" not in policy:
                 policy["blocked"] = True
-                policy["reason"] = policy.get("reason", "manual")
+                policy["reason"] = reason
 
             self.policies.setdefault(dpid, {})[mac] = policy
             dp = self.datapaths.get(int(dpid))
@@ -355,9 +356,9 @@ class SimpleSwitch13(app_manager.RyuApp):
             "dpid": dpid,
             "mac": mac,
             "mean_rate": mean_rate,
-            "var_rate": np.var(rates),
-            "max_rate": np.max(rates),
-            "min_rate": np.min(rates),
+            "var_rate": var_rate,
+            "max_rate": max_rate,
+            "min_rate": min_rate,
             "mean_interval": mean_interval,
             "std_interval": std_interval,
             "burst_count": burst_count,
@@ -458,7 +459,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         
         self.mac_to_port.setdefault(dpid, {})
 
-        #self.logger.info("packet in %s %s %s %s", dpid, src, dst, in_port)
+        self.logger.debug("packet in %s %s %s %s", dpid, src, dst, in_port)
 
         self.mac_to_port[dpid][src] = in_port
 
