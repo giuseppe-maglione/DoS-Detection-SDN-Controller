@@ -76,7 +76,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         self.mac_timestamps = {}      # {dpid: {mac: [t1, t2, ...]}}
         self.dst_sources = {}         # {dpid: {dst: set([src1, src2, ...])}}      # molte sorgenti e poche destinazioni, tipico di attacchi ddos
         self.mac_pkt_sizes = {}       # {dpid: {mac: [pkt_len1, pkt_len2, ...]}}   # pacchetti piccoli, tipico di attacchi più stralth
-        self.csv_file = "traffic_features.csv"
+        self.csv_file = "traffic.csv"
         self.csv_fields = [
             "timestamp","dpid","mac",
             "mean_rate","var_rate","max_rate","min_rate",
