@@ -38,10 +38,12 @@ MEAN_RATIO = 1              # fattore di gestione media mobile
 N_HISTORY = 20              # numero di campioni per valutare soglia dinamica e raccolta dati
 ALPHA = 0.8                 # decremento contatore se rate < 80% della soglia attuale
 BAN_RATIO = 10              # fattore di ban-time
+MIN_RATE = 250	  	        # rate minimo sotto cui non far lavorare il modello di ML
+BAN_TIME = 30               # tempo di ban solo per attacchi stealth e ddos
 
 # MAC noti degli host
 HOST_MACS = {"00:00:00:00:00:01", "00:00:00:00:00:02", "00:00:00:00:00:03"}
-FEATURE_CLASS = "normale"
+FEATURE_CLASS = "attacco"
 
 # colori per output console
 RED = "\033[91m"
@@ -111,7 +113,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         self.monitor_thread = hub.spawn(self._monitor_loop)
         self.detect_thread = hub.spawn(self._detect_loop)
         self.enforce_thread = hub.spawn(self._enforce_loop)
-        self.feature_thread = hub.spawn(self._feature_loop)   # thread di raccolta dati per addestrare il modello
+        # self.feature_thread = hub.spawn(self._feature_loop)   # thread di raccolta dati per addestrare il modello
 
     # === MONITORING ===
     @set_ev_cls(ofp_event.EventOFPStateChange, [MAIN_DISPATCHER, DEAD_DISPATCHER])
@@ -222,16 +224,15 @@ class SimpleSwitch13(app_manager.RyuApp):
             
             if not state["blocked"]:
                 # --- detection classica ---
+                classical_detect = False
                 classical_detect = rate > threshold
-                if rate < threshold * ALPHA:
-                    state["counter"] = max(0, state["counter"] - 1)     # decrementa contatore
                 # --- detection machine learning ---
                 ml_detect = False
                 if mac in HOST_MACS:    # evita predizioni su dati degli switch (solo host → host)
                     features = self.extract_features(dpid, mac)
                     if features:
                         # evita predizione su dati incompleti
-                        if any(features[f] > 0 for f in self.ml_features):
+                        if rate > MIN_RATE and any(features[f] > 0 for f in self.ml_features):
                             X_input = pd.DataFrame([[features[f] for f in self.ml_features]],
                                                    columns=self.ml_features)
                             try:
@@ -244,19 +245,26 @@ class SimpleSwitch13(app_manager.RyuApp):
                                 
                 if classical_detect:
                     state["counter"] = min(X, state["counter"] + 1)
-                    self.logger.info(YELLOW + f"\t[DETECTION] Warning: A possible DoS attack has been detected. Info:" + RESET)
-                    self.logger.info(YELLOW + f"\tMac: {mac}, Switch: {dpid}, Exceeded threshold: {threshold:.1f}, Current rate: {rate:.1f}, Counter: {state['counter']}/{X}" + RESET)
+                    self.logger.info(YELLOW + f"\n\t[DETECTION] Warning: A possible DoS attack has been detected. Info:" + RESET)
+                    self.logger.info(YELLOW + f"Mac: {mac}, Switch: {dpid}, Exceeded threshold: {threshold:.1f}, Current rate: {rate:.1f}, Counter: {state['counter']}/{X}" + RESET)
                 if ml_detect:
                     state["counter"] = min(X, state["counter"] + 1)
-                    self.logger.info(PURPLE + f"\t[STEALTH/DDOS DETECTION] Warning: A possible Stealth/DDoS attack has been detected by ML model. Info:" + RESET)
-                    self.logger.info(PURPLE + f"\tMac: {mac}, Switch: {dpid}, Exceeded threshold: {threshold:.1f}, Current rate: {rate:.1f}, Counter: {state['counter']}/{X}" + RESET)
+                    self.logger.info(PURPLE + f"\n\t[STEALTH/DDOS DETECTION] Warning: A possible Stealth/DDoS attack has been detected by ML model. Info:" + RESET)
+                    self.logger.info(PURPLE + f"Mac: {mac}, Switch: {dpid}, Exceeded threshold: {threshold:.1f}, Current rate: {rate:.1f}, Counter: {state['counter']}/{X}" + RESET)
                     
+                # decrementa contatore se non riconosciuto da modello ML
+                # (altrimenti gli attacchi stealth non vengono bloccati)
+                if rate < threshold * ALPHA and not ml_detect:
+                    state["counter"] = max(0, state["counter"] - 1)
+                
                 # blocco se il contatore raggiunge X
                 if state["counter"] >= X:
-                    excess_ratio = rate / threshold
-                    block_time = excess_ratio * BAN_RATIO * X
+                    if ml_detect:
+                        block_time = BAN_TIME       # serve un tempo di blocco fisso per evitare problemi con attacchi stealth
+                    else:
+                        excess_ratio = rate / threshold
+                        block_time = excess_ratio * BAN_RATIO * X
                     state["unlock_time"] = now + block_time
-
                     policy = {
                         "switch": dpid,
                         "mac": mac,
