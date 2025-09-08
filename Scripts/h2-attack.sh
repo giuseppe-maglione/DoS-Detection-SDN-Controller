@@ -11,6 +11,7 @@ for cycle in {1..20}; do
 
     # 1. UDP flood (DDoS con h1)
     iperf -c $TARGET -p $PORT_UDP -u -b 6M -t 25
+    
     # 2. TCP flood (DDoS con h1)
     iperf -c $TARGET -p $PORT_TCP -b 4M -t 25
 

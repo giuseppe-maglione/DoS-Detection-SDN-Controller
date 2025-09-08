@@ -353,11 +353,11 @@ class SimpleSwitch13(app_manager.RyuApp):
             if counts:
                 src_diversity = sum(counts) / len(counts)
 
-        # percentuale pacchetti piccoli (<100B)
+        # percentuale pacchetti piccoli (<250B)
         pkt_sizes = self.mac_pkt_sizes.get(dpid, {}).get(mac, [])
         small_pkt_ratio = 0
         if pkt_sizes:
-            small_pkt_ratio = sum(1 for s in pkt_sizes if s < 100) / len(pkt_sizes)
+            small_pkt_ratio = sum(1 for s in pkt_sizes if s < 250) / len(pkt_sizes)
 
         features = {
             "timestamp": time.time(),

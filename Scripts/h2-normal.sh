@@ -11,10 +11,13 @@ for cycle in {1..5}; do
 
     # 1. UDP medio
     iperf -c $TARGET -p $PORT_UDP -u -b 2M -t 25
+
     # 2. TCP leggero
     iperf -c $TARGET -p $PORT_TCP -b 1M -t 35
+
     # 3. UDP leggero
     iperf -c $TARGET -p $PORT_UDP -u -b 500K -t 20
+    
     # 4. Ping variabile
     for i in {1..30}; do
         SIZE=$((50 + RANDOM % 100))
