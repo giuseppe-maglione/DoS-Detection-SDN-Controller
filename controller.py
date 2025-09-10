@@ -336,10 +336,10 @@ class SimpleSwitch13(app_manager.RyuApp):
         var_rate = np.var(rates)
         max_rate = np.max(rates)
         min_rate = np.min(rates)
-
-        intervals = np.diff(times)
-        mean_interval = np.mean(intervals) if len(intervals) > 0 else 0
-        std_interval = np.std(intervals) if len(intervals) > 0 else 0
+        
+        intervals = np.diff(times)      # intervalli di tempo tra due pacchetti consecutivi
+        mean_interval = np.mean(intervals) if len(intervals) > 0 else 0     # ogni quanto in media l'host invia pacchetti
+        std_interval = np.std(intervals) if len(intervals) > 0 else 0       # deviazione standard degli intervalli
 
         # burst count: quante volte il rate supera 1.5x la media
         burst_count = sum(r > mean_rate * 1.5 for r in rates)
