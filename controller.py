@@ -93,7 +93,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                 writer.writeheader()
         '''
         # setup modello (RandomForest)
-        self.ml_model = joblib.load("dos_ddos_detector.pkl")
+        self.ml_model = joblib.load("detector.pkl")
         self.ml_model.n_jobs = 1
         self.ml_features = [
             "mean_rate","var_rate","max_rate","min_rate",
@@ -225,7 +225,7 @@ class SimpleSwitch13(app_manager.RyuApp):
             if not state["blocked"]:
                 # --- detection classica ---
                 classical_detect = False
-                classical_detect = rate > threshold
+                #classical_detect = rate > threshold
                 # --- detection machine learning ---
                 ml_detect = False
                 if mac in HOST_MACS:    # evita predizioni su dati degli switch (solo host → host)
