@@ -349,9 +349,9 @@ class SimpleSwitch13(app_manager.RyuApp):
         dst_map = self.dst_sources.get(dpid, {})
         src_diversity = 0
         if dst_map:
-            counts = [len(srcs) for srcs in dst_map.values()]
-            if counts:
-                src_diversity = sum(counts) / len(counts)
+            counts = [len(srcs) for srcs in dst_map.values()]   # numero di sorgenti (uniche) che hanno contattato ciascuna destinazione
+            if counts:                                          # per attacchi ddos ci sono moltre sorgenti per la stessa destinazione, quindi counts aumenta
+                src_diversity = sum(counts) / len(counts)       # calcola la media del numero di sorgenti per destinazione
 
         # percentuale pacchetti piccoli (<250B)
         pkt_sizes = self.mac_pkt_sizes.get(dpid, {}).get(mac, [])
