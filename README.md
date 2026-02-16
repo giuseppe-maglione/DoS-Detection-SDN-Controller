@@ -1,6 +1,7 @@
 # DoS-Detection SDN Controller
-Progetto per il corso di Network and Cloud Infrastructures. 
 
-Controller SDN per il monitoraggio e rilevamento di attacchi DoS, 
-con l’aggiunta di un modello di Machine Learning per l’individuazione 
-di possibili attacchi stealth e DDoS.
+SDN controller for monitoring and detecting DoS attacks,
+with the addition of a machine learning model to identify
+potential stealth and DDoS attacks.
+
+> **Corso:** Network and Cloud Infrastructures (2024/2025)
